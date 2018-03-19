@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en-US">
+<head>
+    <meta charset="utf-8">
+
+    <title>[@title]</title>
+
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            font-family: sans-serif;
+            background-color: #ededed;
+            color: #555;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>[@title]</h1>
+    [@content]
+</body>
+</html>
