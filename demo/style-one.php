@@ -5,18 +5,10 @@ ini_set('display_errors', 1);
 
 require('../Modello.php');
 
-//$modello = Modello::new('templates/')->file('page-one.tmp');
-
-$modello = new Modello();
-
-$modello->setBatch(array(
-    'page' => 'templates/page',
-    'content' => 'templates/content-one'
-));
-
-$modello->setValues(array(
-    'title' => 'Style One',
+$modello = new Modello('templates/');
+$modello->setBatch(['page' => 'page.tmp', 'content' => 'content-one.tmp']);
+$modello->setVars([
+    'title' => 'testo',
     'content' => $modello->output('content')
-), 'page');
-
+], 'page');
 echo $modello->output('page');
