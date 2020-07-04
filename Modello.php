@@ -1,166 +1,84 @@
 <?php
-/*
-// Modello
-// A super-simple and lightweight templater! :D
-//
-// @author: Skylear Johnson
-//
-// @TODO
-// - Update code comments
-// - Improve file handling
-// - Improve errors and exception handling
-// - Improve usability
-*/
+
+/**
+ * Modello
+ * 
+ * A simple, ultra-lightweight template engine in PHP, for
+ * small projects
+ * 
+ * @author Skylear "Splashsky" Johnson
+ */
 
 class Modello
 {
-    // @string Default path for templates
-    protected $tmpPath;
+    private string $directory;
 
-    // @string File path for if we're only on one template
-    protected $file;
-
-    // @array Holds a batch of template files!
-    protected $batch = [];
-
-    // @array Holds the values for either a batch or single template!
-    protected $values = [];
-
-    // @bool Just a toggle for htmlentities. Set with a setter.
-    protected $safe = false;
-
-    /*
-    // Static method to allow method chains!
-    */
-    public static function new($tmpPath = '')
+    public static function new(string $directory)
     {
-        return new Modello($tmpPath);
+        return new Modello($directory);
     }
 
-    /*
-    // Magic method! Sets tmpPath and returns the instance
-    */
-    public function __construct($tmpPath = '')
+    public function __construct(string $directory)
     {
-        $this->tmpPath = $tmpPath;
+        if (!is_dir($directory)) {
+            throw new Exception('Tried to instantiate Modello without a directory!');
+        }
+
+        $this->directory = $directory;
 
         return $this;
     }
 
-    public function setSafe($safe)
+    private function find(string $template, string $directory = null)
     {
-        $this->safe = $safe;
-        return $this;
-    }
+        $path = str_replace('.', '/', $template);
+        $dir = !is_null($directory) ? $directory : $this->directory;
 
-    public function getSafe()
-    {
-        return $this->safe;
-    }
-
-    public function setFile(string $file)
-    {
-        if (is_readable($this->getExtension($file))) {
-            $this->file = $this->getExtension($file);
-        } else {
-            throw new Exception('Invalid path/file passed to setFile in Modello!');
+        if (!is_readable($dir . $path . '.html')) {
+            throw new Exception('Unable to find() template with given path.');
         }
 
-        return $this;
+        return $this->read($dir . $path . '.html');
     }
 
-    public function getFile()
+    private function read(string $path)
     {
-        return $this->file;
-    }
-
-    public function setBatch(array $files)
-    {
-        if (count($files) > 1) {
-            foreach ($files as $key => $file) {
-                if (is_readable($this->getExtension($file))) {
-                    $this->batch[$key] = $this->getExtension($file);
-                }
-            }
-        } else {
-            throw new Exception('Invalid argument passed to setBatch in Modello.');
+        if (!is_readable($path)) {
+            throw new Exception('Unable to read() given path.');
         }
 
-        return $this;
+        return file_get_contents($path);
     }
 
-    public function getBatch()
+    public function bake(string $template, array $values = [])
     {
-        return $this->batch;
+        $template = $this->find($template);
+
+        return preg_replace_callback(
+            '/{{\s*([A-Za-z0-9_-]+)\s*}}/',
+            function($match) use ($values) { return $values[$match[1]]; },
+            $template
+        );
     }
 
-    public function setValues($values = [], $fileKey = '')
+    public static function quick(string $template, array $values = [])
     {
-        if ($this->isBatch() && array_key_exists($fileKey, $this->batch)) {
-            foreach ($values as $key => $value) {
-                $value = $this->safe ? htmlspecialchars($value) : $value;
-                $this->values[$fileKey][$key] = $value;
-            }
-        } else {
-            foreach ($values as $key => $value) {
-                $value = $this->safe ? htmlspecialchars($value) : $value;
-                $this->values[$key] = $value;
-            }
+        $path = str_replace('.', '/', $template);
+
+        if (!is_readable($path . '.html')) {
+            throw new Exception('Unable to quick() template with given path.');
         }
 
-        return $this;
-    }
-
-    public function getValues()
-    {
-        return $this->values;
-    }
-
-    protected function getExtension(string $URI)
-    {
-        if (preg_match('/(.tmp)/', $URI)) return $this->tmpPath.$URI;
-        return $this->tmpPath.$URI.'.tmp';
-    }
-
-    protected function isBatch()
-    {
-        return (count($this->batch) > 1) ? true : false;
-    }
-
-    public function output($fileKey = '')
-    {
-        if ($this->isBatch() && array_key_exists($fileKey, $this->batch)) {
-            $output = file_get_contents($this->batch[$fileKey]);
-
-            if (!array_key_exists($fileKey, $this->values)) {
-                $values = [];
-            } else {
-                $values = $this->values[$fileKey];
-            }
-        } else {
-            $output = file_get_contents($this->file);
-            $values = $this->values;
-        }
-
-        // Remove all PHP-style comments.
-        $cmmt_pattern = array('#/\*.*?\*/#s', '#(?<!:)//.*#');
-        $output = preg_replace($cmmt_pattern, null, $output);
-
-        // Locate and void out any undefined tags
-        $tags = array();
-        preg_match_all('/\[@([A-Za-z1-9]*)\]/', $output, $tags);
-        foreach ($tags[1] as $tag => $key) {
-            if (!isset($values[$key])) {
-                $values[$key] = '';
-            }
-        }
+        $template = file_get_contents($path . '.html');
 
         $toReplace = array_keys($values);
         foreach ($toReplace as $i => $val) {
-            $toReplace[$i] = '[@'.$val.']';
+            $toReplace[$i] = '{{ '.$val.' }}';
         }
         $values = array_values($values);
 
-        return str_replace($toReplace, $values, $output);
+        return str_replace($toReplace, $values, $template);
     }
 }
+
+?>
