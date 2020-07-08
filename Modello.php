@@ -50,15 +50,26 @@ class Modello
         return file_get_contents($path);
     }
 
+    private function parse(string $template, array $values = [])
+    {
+        return preg_replace_callback(
+            '/{{\s*([A-Za-z0-9_-]+)\s*}}/',
+            function($match) use ($values) {
+                return isset($values[$match[1]]) ? $values[$match[1]] : $match;
+            },
+            $template
+        );
+    }
+
+    public static function staticParse(string $template, array $values = [])
+    {
+        return (new self(''))->parse($template, $values);
+    }
+
     public function bake(string $template, array $values = [])
     {
         $template = $this->find($template);
-
-        return preg_replace_callback(
-            '/{{\s*([A-Za-z0-9_-]+)\s*}}/',
-            function($match) use ($values) { return $values[$match[1]]; },
-            $template
-        );
+        return $this->parse($template, $values);
     }
 
     public static function quick(string $template, array $values = [])
@@ -71,13 +82,7 @@ class Modello
 
         $template = file_get_contents($path . '.html');
 
-        $toReplace = array_keys($values);
-        foreach ($toReplace as $i => $val) {
-            $toReplace[$i] = '{{ '.$val.' }}';
-        }
-        $values = array_values($values);
-
-        return str_replace($toReplace, $values, $template);
+        return self::staticParse($template, $values);
     }
 }
 
