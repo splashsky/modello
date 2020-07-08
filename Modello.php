@@ -12,19 +12,17 @@
 class Modello
 {
     private string $directory;
+    private string $extension;
 
-    public static function new(string $directory)
+    public static function new(string $directory = '', string $ext = '.html')
     {
-        return new Modello($directory);
+        return new Modello($directory, $ext);
     }
 
-    public function __construct(string $directory)
+    public function __construct(string $directory = '', string $ext = '.html')
     {
-        if (!is_dir($directory)) {
-            throw new Exception('Tried to instantiate Modello without a directory!');
-        }
-
         $this->directory = $directory;
+        $this->extension = $ext;
 
         return $this;
     }
@@ -33,12 +31,9 @@ class Modello
     {
         $path = str_replace('.', '/', $template);
         $dir = !is_null($directory) ? $directory : $this->directory;
+        $path = $dir . $path . $this->extension;
 
-        if (!is_readable($dir . $path . '.html')) {
-            throw new Exception('Unable to find() template with given path.');
-        }
-
-        return $this->read($dir . $path . '.html');
+        return $this->read($path);
     }
 
     private function read(string $path)
@@ -55,7 +50,7 @@ class Modello
         return preg_replace_callback(
             '/{{\s*([A-Za-z0-9_-]+)\s*}}/',
             function($match) use ($values) {
-                return isset($values[$match[1]]) ? $values[$match[1]] : $match;
+                return isset($values[$match[1]]) ? $values[$match[1]] : $match[0];
             },
             $template
         );
@@ -63,7 +58,7 @@ class Modello
 
     public static function staticParse(string $template, array $values = [])
     {
-        return (new self(''))->parse($template, $values);
+        return (new self)->parse($template, $values);
     }
 
     public function bake(string $template, array $values = [])
@@ -72,15 +67,16 @@ class Modello
         return $this->parse($template, $values);
     }
 
-    public static function quick(string $template, array $values = [])
+    public static function quick(string $template, array $values = [], string $ext = '.html')
     {
         $path = str_replace('.', '/', $template);
+        $path = $path . $ext;
 
-        if (!is_readable($path . '.html')) {
+        if (!is_readable($path)) {
             throw new Exception('Unable to quick() template with given path.');
         }
 
-        $template = file_get_contents($path . '.html');
+        $template = file_get_contents($path);
 
         return self::staticParse($template, $values);
     }
