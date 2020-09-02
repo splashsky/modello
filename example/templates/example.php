@@ -16,6 +16,12 @@
             @else
                 <p>Foo is not true!</p>
             @endif
+
+            <ul>
+                @foreach($bar as $key => $value)
+                    <li>{{ $key }} equals {{ $value }}</li>
+                @endforeach
+            </ul>
         </main>
     </body>
 </html>

@@ -106,9 +106,14 @@ class Modello
     private function processAllTags(string $template)
     {
         /**
+         * The almighty include tag
+         */
+        $template = preg_replace_callback('/@include\(\s*(.+)\s*\)/', [$this, 'parseIncludeTag'], $template);
+
+        /**
          * Echo tag (e.g. {{ $var }})
          */
-        $template = preg_replace_callback('/{{\s*(.+)\s*}}/', [$this, 'parseEchoTag'], $template);
+        $template = preg_replace_callback('/{{\s*(.+?)\s*}}/', [$this, 'parseEchoTag'], $template);
 
         /**
          * If statement tags (e.g. @if(condition) ... @endif)
@@ -127,7 +132,7 @@ class Modello
         /**
          * Comment tags
          */
-        $template = preg_replace_callback('/{--[\s\S]*--}/', [$this, 'parseIntoNonexistence'], $template);
+        $template = preg_replace_callback('/{--[\s\S]*?--}/', [$this, 'parseIntoNonexistence'], $template);
 
         return $template;
     }
@@ -185,6 +190,20 @@ class Modello
     private function parseForeachTag(array $match) : string
     {
         return "<?php foreach({$match[1]}) { ?>";
+    }
+
+    /**
+     * Parse the include tag so that it brings in the requested template
+     * 
+     * @param array $match
+     * @return string
+     */
+    private function parseIncludeTag(array $match) : string
+    {
+        $path = str_replace('.', '/', $match[1]);
+        $path = $this->directory . $path . $this->extension;
+
+        return $this->read($path);
     }
 
     /**

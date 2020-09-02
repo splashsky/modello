@@ -11,11 +11,17 @@
                 <?php echo($content); ?>
             </p>
 
-            <?php if ($foo) { ?>
+            <?php if($foo) { ?>
                 <p>Foo is true!</p>
             <?php } else { ?>
                 <p>Foo is not true!</p>
             <?php } ?>
+
+            <ul>
+                <?php foreach($bar as $key => $value) { ?>
+                    <li><?php echo($key); ?> equals <?php echo($value); ?></li>
+                <?php } ?>
+            </ul>
         </main>
     </body>
 </html>
