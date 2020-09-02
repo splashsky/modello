@@ -117,6 +117,12 @@ class Modello
         $template = preg_replace_callback('/@else/', [$this, 'parseElseTag'], $template);
         $template = preg_replace_callback('/@elseif\(\s*(.+)\s*\)/', [$this, 'parseElseIfTag'], $template);
         $template = preg_replace_callback('/@endif/', [$this, 'parseClosingBrace'], $template);
+
+        /**
+         * Loop statement tags (e.g. @foreach($values as $key => $value) ... @endforeach)
+         */
+        $template = preg_replace_callback('/@foreach\(\s*(.+)\s*\)/', [$this, 'parseForeachTag'], $template);
+        $template = preg_replace_callback('/@endforeach/', [$this, 'parseClosingBrace'], $template);
     }
 
     /**
@@ -138,7 +144,7 @@ class Modello
      */
     private function parseIfTag(array $match) : string
     {
-        return "<?php if ({$match[1]}) { ?>";
+        return "<?php if({$match[1]}) { ?>";
     }
 
     /**
@@ -161,6 +167,17 @@ class Modello
     private function parseElseIfTag(array $match) : string
     {
         return "<?php } elseif({$match[1]}) { ?>";
+    }
+
+    /**
+     * Parse the foreach tags in the template (e.g. @foreach(assignment) becomes <?php foreach(assignment) { ?>)
+     * 
+     * @param array $match
+     * @return string
+     */
+    private function parseForeachTag(array $match) : string
+    {
+        return "<?php foreach({$match[1]}) { ?>";
     }
 
     /**
