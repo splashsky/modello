@@ -1,4 +1,10 @@
-# Modello - simple templater
+<p align="center"><img src="https://i.imgur.com/xZKsXPi.jpg" width="600"></p>
+<p align="center">
+    <img src="https://img.shields.io/github/v/release/splashsky/modello?style=for-the-badge">
+    <img src="https://img.shields.io/badge/made%20with-php-blueviolet?style=for-the-badge">
+</p>
+
+# Modello - simple, lightweight template compiler
 
 **Modello** is a super-simple, super-lightweight templating engine written in PHP. It's purpose is to be a standalone class that can be included in any project and used to quickly and efficiently parse a template.
 
