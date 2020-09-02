@@ -105,4 +105,4 @@ echo Modello::simple('path/to/file', ['foo' => 'bar']);
 Of course, you wont have access to any of the directives or other features of a compiled template.
 
 ## License
-Modello is completely free, open source software. It's covered under the classic MIT license, and you can read the details in the [readme.md](readme).
+Modello is completely free, open source software. It's covered under the classic MIT license, and you can read the details in the [license.md](license.md).
