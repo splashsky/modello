@@ -74,17 +74,7 @@ class Modello
     {
         $this->values = $values;
 
-        /**
-         * Echo tag (e.g. {{ $var }})
-         */
-        $template = preg_replace_callback('/{{\s*(\$([A-Za-z0-9_]+))\s*}}/', [$this, 'parseEchoTag'], $template);
-
-        /**
-         * If statement tags (e.g. @if(condition) ... @endif)
-         */
-        $template = preg_replace_callback('/@if\(\s*(.+)\s*\)/', [$this, 'parseIfTag'], $template);
-        $template = preg_replace_callback('/@else/', [$this, 'parseElseTag'], $template);
-        $template = preg_replace_callback('/@endif/', [$this, 'parseEndIfTag'], $template);
+        
 
         $cache = $this->directory . '/cached';
         $cached = md5($this->workingFile).'.php';
@@ -108,6 +98,27 @@ class Modello
     }
 
     /**
+     * Send the provided string through all our tag parsing functions
+     * 
+     * @param string $template
+     * @return string
+     */
+    private function processAllTags(string $template)
+    {
+        /**
+         * Echo tag (e.g. {{ $var }})
+         */
+        $template = preg_replace_callback('/{{\s*(.+)\s*}}/', [$this, 'parseEchoTag'], $template);
+
+        /**
+         * If statement tags (e.g. @if(condition) ... @endif)
+         */
+        $template = preg_replace_callback('/@if\(\s*(.+)\s*\)/', [$this, 'parseIfTag'], $template);
+        $template = preg_replace_callback('/@else/', [$this, 'parseElseTag'], $template);
+        $template = preg_replace_callback('/@endif/', [$this, 'parseEndIfTag'], $template);
+    }
+
+    /**
      * Parse the echo tags in the template (e.g. {{ $foo }} becomes <?php echo($foo); ?>)
      * 
      * @param array $match
@@ -115,9 +126,7 @@ class Modello
      */
     private function parseEchoTag(array $match) : string
     {
-        if (isset($this->values[$match[2]])) { return '<?php echo('.$match[1].'); ?>'; }
-        
-        return $match[0];
+        return '<?php echo('.$match[1].'); ?>';
     }
 
     /**
