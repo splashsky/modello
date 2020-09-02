@@ -201,7 +201,7 @@ class Modello
     private function parseIncludeTag(array $match) : string
     {
         $path = str_replace('.', '/', $match[1]);
-        $path = $this->directory . $path . $this->extension;
+        $path = $this->directory . trim($path, "'") . $this->extension;
 
         return $this->read($path);
     }

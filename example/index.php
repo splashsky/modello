@@ -1,9 +1,5 @@
 <?php
 
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-
 require '../src/Modello.php';
 
 $modello = new Splashsky\Modello\Modello('templates/');
@@ -16,5 +12,6 @@ echo $modello->bake('example', [
     'bar' => [
         'one' => 'Juan',
         'two' => 'Deus'
-    ]
+    ],
+    'example' => 'emperor'
 ]);

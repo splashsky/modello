@@ -1,0 +1,1 @@
+<div>Example {{ $example }}</div>

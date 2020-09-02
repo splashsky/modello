@@ -22,6 +22,8 @@
                     <li>{{ $key }} equals {{ $value }}</li>
                 @endforeach
             </ul>
+
+            @include('test.example2')
         </main>
     </body>
 </html>

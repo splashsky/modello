@@ -22,6 +22,8 @@
                     <li><?php echo($key); ?> equals <?php echo($value); ?></li>
                 <?php } ?>
             </ul>
+
+            <div>Example <?php echo($example); ?></div>
         </main>
     </body>
 </html>
