@@ -22,10 +22,7 @@ You need to pass the path to your template files, with a trailing slash. This pa
 
 ```php
 /**
- * File Structure
  * templates/
- *     components/
- *         header.html
  *     page.html
  */
 
