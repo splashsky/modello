@@ -115,6 +115,7 @@ class Modello
          */
         $template = preg_replace_callback('/@if\(\s*(.+)\s*\)/', [$this, 'parseIfTag'], $template);
         $template = preg_replace_callback('/@else/', [$this, 'parseElseTag'], $template);
+        $template = preg_replace_callback('/@elseif\(\s*(.+)\s*\)/', [$this, 'parseElseIfTag'], $template);
         $template = preg_replace_callback('/@endif/', [$this, 'parseEndIfTag'], $template);
     }
 
@@ -126,7 +127,7 @@ class Modello
      */
     private function parseEchoTag(array $match) : string
     {
-        return '<?php echo('.$match[1].'); ?>';
+        return "<?php echo({$match[1]}); ?>";
     }
 
     /**
@@ -137,7 +138,7 @@ class Modello
      */
     private function parseIfTag(array $match) : string
     {
-        return "<?php if (".$match[1].") { ?>";
+        return "<?php if ({$match[1]}) { ?>";
     }
 
     /**
@@ -149,6 +150,17 @@ class Modello
     private function parseElseTag(array $match) : string
     {
         return "<?php } else { ?>";
+    }
+
+    /**
+     * Parse the else tag for if statements! (e.g. @else becomes <?php } else { ?>)
+     * 
+     * @param array $match
+     * @return string
+     */
+    private function parseElseIfTag(array $match) : string
+    {
+        return "<?php } elseif({$match[1]}) { ?>";
     }
 
     /**
