@@ -116,7 +116,7 @@ class Modello
         $template = preg_replace_callback('/@if\(\s*(.+)\s*\)/', [$this, 'parseIfTag'], $template);
         $template = preg_replace_callback('/@else/', [$this, 'parseElseTag'], $template);
         $template = preg_replace_callback('/@elseif\(\s*(.+)\s*\)/', [$this, 'parseElseIfTag'], $template);
-        $template = preg_replace_callback('/@endif/', [$this, 'parseEndIfTag'], $template);
+        $template = preg_replace_callback('/@endif/', [$this, 'parseClosingBrace'], $template);
     }
 
     /**
@@ -164,12 +164,12 @@ class Modello
     }
 
     /**
-     * Parse the tags that end if statements (e.g. @endif becomes <?php } ?>)
+     * Parse a tag into a closing brace for control structures
      * 
      * @param array $match
      * @return string
      */
-    private function parseEndIfTag(array $match) : string
+    private function parseClosingBrace(array $match) : string
     {
         return "<?php } ?>";
     }
