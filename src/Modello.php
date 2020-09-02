@@ -1,5 +1,7 @@
 <?php
 
+namespace Splashsky\Modello;
+
 /**
  * Modello
  * 
