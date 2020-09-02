@@ -6,63 +6,103 @@
 
 # Modello - simple, lightweight template compiler
 
-**Modello** is a super-simple, super-lightweight templating engine written in PHP. It's purpose is to be a standalone class that can be included in any project and used to quickly and efficiently parse a template.
+**Modello** is a super-simple, super-lightweight templating engine written in PHP. It's purpose is to be a standalone class that can be included in any project and used to quickly and efficiently parse/compile a template.
 
 ## Contributing
 While I don't intend for this to become a replacement for other templating solutions or anything to really depend on in a project, I felt it would be fun to make a simple little compiler for small projects. The goal is ease of use and compactness, and hopefully my work reflects that.
 
 If you have ideas, or want to contribute some code, feel more than welcome to open an Issue or a Pull Request. Thanks for dropping by!
 
-## How does it work?
+## Getting Started
+The easiest way of using Modello in your project is Composer.
+```shell
+composer require splashsky/modello
+```
 
-You can now `require` Modello in a Composer package!
+Otherwise, you can download the `.zip` or clone the project using Git. After that, move the `Modello.php` class file to wherever you want!
 
-Download the `.zip` or clone the project using Git. Move the `Modello.php`class file to wherever you want to. In the script you need to use Modello in, `require` it.
-
-There are two ways to use Modello. We'll cover the main way to get it going.
+## How do I start up the compiler?
+Modello is easy to get started with.
 
 ```php
-require 'path/to/Modello.php';
+// require() or 'use' Modello, depending on your environment
 
-$modello = new Modello('templates/');
+$modello = new Modello('path/to/template/directory');
 ```
-You need to pass the path to your template files, with a trailing slash. This path must be to a directory, and must be readable by the script. To parse a template, you only need to use the `bake()` method. The `bake()` method takes two arguments. First is the path to the template, otionally using dot notation. It will search your template directory for the file, and find the first file with the given name, ending in `.php`. You can change the extension by passing a second argument to the constructor, for example '.html'.
+
+The first argument for the constructor tells Modello where your template directory is, and this will be the root from which Modello looks for template files. This is also where Modello will created a "cached" directory, where compiled templates are cached.
+
+The second argument allows you to change the extension Modello looks for on template files - by default this is `.php`. Regardless of what you set as the extension, all compiled templates will have the `.php` extension so that they are executed as PHP scripts.
+
+## How do I compile a template?
+Modello calls this "baking". The syntax for baking a template is simple, too!
 
 ```php
 /**
+ * File Directory
  * templates/
- *     page.html
- */
+ *     cached/
+ *     example.php
+*/
 
- echo $modello->bake('page', [
-     'content' => 'Hello, world!'
- ]);
+echo $modello->bake('example', [
+    'foo' => 'bar'
+]);
 ```
 
-As you can see, the second parameter allows you to fill in placeholders in your templates with data. These take the format of `{{$key}}`, and in your values array you only need to assign a value to the same-named key, e.g. `'key' => 'value'`. This format ignores extra whitespace between the brackets, so `{{ $key }}` or `{{   $key}}` is just as valid. Please note the key name cannot have spaces or non-alphanumeric characters. You can use underscores.
+When telling Modello what template to bake, ensure you're not adding the extension - only use the name of the template. Modello will use whatever extension it has set when it looks for your file. You can use dot notation as well, so 'foo.bar' is as valid as 'foo/bar'.
 
-```php
-{{ $key one }} // Will not work
-{{ $key-one }} // Will not work
-{{ $key_one }} // Will work
+The second argument in the `bake()` function is your values array - these will be extracted into the resulting template.
+
+When a template is compiled for the first time - or if Modello detects the original template file has changed - it will generate a new compiled version of the template and store it in the cached directory. The name of the file is an `md5()` hash of the fully qualified path and name of your template file.
+
+## What syntax can I use in the template?
+Modello uses template syntax very similar to Laravel Blade. Here's the directives it currently supports:
+
 ```
+// This is the echo syntax
+{{ $foo }}
+{{ bar() }}
 
-Modello also currently supports basic if-else control structures, the syntax for which is:
-
-```php
+// This is the if-else syntax
 @if(condition)
-    ... content here
+    // ...
+@elseif(condition)
+    // ...
 @else
-    ... other content
+    // ...
 @endif
+
+// This is the foreach syntax
+@foreach($array as $key => $value)
+    {{ $key }} equals {{ $value }}
+@endforeach
+
+// This is a comment
+{{-- I won't show up in the HTML or in the compiled template file! --}}
+
+// This is the almighty include directive!
+@include('path.to.template')
 ```
 
-It can access any variable you passed in the `$values` parameter of your `bake()`.
+As long as the data you provide the directives is valid PHP, it will work!
 
-If you need to quickly parse a simple string, you can use the static method `simple()`, which can be used like so:
+For the include directive, it will look for the template you specify relative to the template directory you gave to Modello. If it cannot find the template you specify, it will return "path/to/template.php could not be found", which will show up in your HTML.
+
+## What if I just need to parse?
+Modello still has the classic parsing functionality from before - in the new static method `simple()`.
 
 ```php
-Modello::simple('Hello, {{ name }}!', ['name' => 'Splash']);
+// Again, require() or 'use' Modello depending on your environment
+
+// You can simply pass a string to the first parameter...
+echo Modello::simple('Hello, {{ name }}!', ['name' => 'Jerry']);
+
+// Or pass a fully qualified path!
+echo Modello::simple('path/to/file', ['foo' => 'bar']);
 ```
 
-You can also specify a file in the first parameter (e.g. `$_SERVER['DOCUMENT_ROOT'].'/templates/foo.html'`) and if it is readable it will parse that file using the same formatting.
+Of course, you wont have access to any of the directives or other features of a compiled template.
+
+## License
+Modello is completely free, open source software. It's covered under the classic MIT license, and you can read the details in the [readme.md](readme).
