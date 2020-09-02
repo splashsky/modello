@@ -74,7 +74,7 @@ class Modello
     {
         $this->values = $values;
 
-        
+        $template = $this->processAllTags($template);
 
         $cache = $this->directory . '/cached';
         $cached = md5($this->workingFile).'.php';
@@ -123,6 +123,13 @@ class Modello
          */
         $template = preg_replace_callback('/@foreach\(\s*(.+)\s*\)/', [$this, 'parseForeachTag'], $template);
         $template = preg_replace_callback('/@endforeach/', [$this, 'parseClosingBrace'], $template);
+
+        /**
+         * Comment tags
+         */
+        $template = preg_replace_callback('/{--[\s\S]*--}/', [$this, 'parseIntoNonexistence'], $template);
+
+        return $template;
     }
 
     /**
@@ -182,6 +189,17 @@ class Modello
 
     /**
      * Parse a tag into a closing brace for control structures
+     * 
+     * @param array $match
+     * @return string
+     */
+    private function parseIntoNonexistence(array $match) : string
+    {
+        return "";
+    }
+
+    /**
+     * Parse a tag into NONEXISTENCE (for comment tags)
      * 
      * @param array $match
      * @return string
