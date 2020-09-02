@@ -1,0 +1,17 @@
+{
+    "name": "splashsky/modello",
+    "description": "A simple, lightweight template compiler",
+    "type": "package",
+    "keywords": ["compiler", "template", "engine", "parser"],
+    "homepage": "https://surf.gg",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Skylear Johnson",
+            "email": "skylearj@gmail.com",
+            "homepage": "https://surf.gg",
+            "role": "Developer"
+        }
+    ],
+    "require": {}
+}
