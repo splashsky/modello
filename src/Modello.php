@@ -57,7 +57,6 @@ class Modello
      */
     private function read(string $path)
     {
-        if (! is_readable($path)) { return $path . ' not found'; }
         return file_get_contents($path);
     }
 
@@ -89,12 +88,16 @@ class Modello
         }
         
         /**
-         * We'll extract our values array into the global scope and then
-         * return the compiled template through a require statement so
-         * it will execute
+         * If there's an existing OB session we want to clear it out so we
+         * can sandbox the template and process it.
          */
+        if (ob_get_level() > 1) { ob_end_clean(); }
+        ob_start();
+
         extract($values);
-        return require $file;
+        require $file;
+
+        return ob_get_clean();
     }
 
     /**
@@ -145,7 +148,7 @@ class Modello
      */
     private function parseEchoTag(array $match) : string
     {
-        return "<?php echo({$match[1]}); ?>";
+        return "<?php echo htmlentities({$match[1]}); ?>";
     }
 
     /**
