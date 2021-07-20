@@ -1,17 +1,11 @@
 <?php
 
-require '../src/Modello.php';
+use Splashsky\Modello;
 
-$modello = new Splashsky\Modello\Modello('templates/');
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 
-echo $modello->bake('example', [
-    'title' => 'Foobar',
-    'h1' => 'Hello, world!',
-    'content' => 'poop',
-    'foo' => true,
-    'bar' => [
-        'one' => 'Juan',
-        'two' => 'Deus'
-    ],
-    'example' => 'emperor'
-]);
+require '../src/Splashsky/Modello.php';
+
+Modello::view('page', ['reee' => true]);

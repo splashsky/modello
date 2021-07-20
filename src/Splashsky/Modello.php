@@ -2,283 +2,173 @@
 
 namespace Splashsky;
 
-/**
- * Modello
- * 
- * A simple, ultra-lightweight template engine in PHP, for
- * small projects
- * 
- * @author Skylear "Splashsky" Johnson
- */
-
 class Modello
 {
-    private string $directory;
-    private string $extension;
-    private array $values;
-    private string $workingFile;
+    /**
+     * Defaults to 'views/'. The directory in which we look for view templates, and where we make the cache.
+     */
+    private static string $views = 'views/';
 
     /**
-     * Create the instance of Modello
-     * 
-     * @param string $directory
-     * @param string $ext
-     * @return void
+     * Defaults to 'views/cache/'. The directory we create to store cached files.
      */
-    public function __construct(string $directory = '', string $ext = '.php')
-    {
-        $this->directory = $directory;
-        $this->extension = $ext;
+    private static string $cache = 'views/cache/';
 
-        $this->createCache();
+    /**
+     * Defaults to '.html'. The file extension we expect when reading files.
+     */
+    private static string $extension = '.html';
+
+    /**
+     * Defaults to false. Whether or not we'll serve cached files or recompile them every request.
+     */
+    private static bool $cacheEnabled = false;
+
+    /**
+     * Stores the blocks we're working with in the current file.
+     */
+    private static array $blocks = [];
+
+    /**
+     * Takes a given file path and an array of data, and processes the given file (if it exists)
+     * according to the rules of the engine. Returns nothing, but uses require to "call" the compiled
+     * script.
+     *
+     * @param string $file The path to a file to read. Prepended with Modello::$views
+     * @param array $data Defaults to an empty array. An optional array of data to pass to the compiler.
+     */
+    public static function view(string $file, array $data = []): void
+    {
+        $cached = self::cache($file);
+        extract($data, EXTR_SKIP);
+        require $cached;
     }
 
     /**
-     * Find a given template using the currently stored directory
-     * 
-     * @param string $template
-     * @return string
+     * Determines whether the given file needs to be cached, or if it needs to be remade. If the file
+     * needs recompiled (or compiled for the first time) that process kicks off here. Returns the path
+     * to the compiled/cached file.
      */
-    private function find(string $template)
+    private static function cache(string $file): string
     {
-        $path = str_replace('.', '/', $template);
-        $path = $this->directory . $path . $this->extension;
-        $this->workingFile = $path;
+        self::makeCacheDirectory();
 
-        return $this->read($path);
-    }
+        $cached = self::$cache . str_replace(['/', self::$extension], ['-', ''], "$file.php");
+        $filePath = self::$views . $file . self::$extension;
 
-    /**
-     * See if the file we're looking for is readable, if not then
-     * we'll return an error string to ensure the user knows.
-     * 
-     * @param string $path
-     * @return string
-     */
-    private function read(string $path)
-    {
-        return file_get_contents($path);
-    }
+        // If the cache is disabled, or if the file isn't cached, or if it's been recently modified,
+        // (re)compile the file and throw it in the cache
+        if (!self::$cacheEnabled || !file_exists($cached) || filemtime($cached) < filemtime($filePath)) {
+            $page = self::handleIncludes($file);
+            $page = self::compile($page);
 
-    /**
-     * Takes the path of the template and the values from bake()
-     * and parses the template, caches a compiled version and returns
-     * it.
-     * 
-     * @param string $template
-     * @param array $values
-     * @return string
-     */
-    private function parse(string $template, array $values = [])
-    {
-        $this->values = $values;
-
-        $template = $this->processAllTags($template);
-
-        $cache = $this->directory . '/cached';
-        $cached = md5($this->workingFile).'.php';
-        $file = $cache.'/'.$cached;
-
-        /**
-         * If the cached file doesn't exist, or has changed since it's last
-         * compile, we'll write into the file with the new template
-         */
-        if (! is_readable($file) || md5($template) != md5_file($file)) {
-            file_put_contents($file, $template);
+            $timestamp = '<!-- Cached on '.date('jS F Y h:i:s A').' -->' . PHP_EOL;
+            file_put_contents($cached, $timestamp . $page);
         }
-        
-        /**
-         * If there's an existing OB session we want to clear it out so we
-         * can sandbox the template and process it.
-         */
-        if (ob_get_level() > 1) { ob_end_clean(); }
-        ob_start();
 
-        extract($values);
-        require $file;
-
-        return ob_get_clean();
+        return $cached;
     }
 
     /**
-     * Send the provided string through all our tag parsing functions
-     * 
-     * @param string $template
-     * @return string
+     * If the cache directory (Modello::$cache) doesn't exist, create it.
      */
-    private function processAllTags(string $template)
+    private static function makeCacheDirectory(): void
     {
-        /**
-         * The almighty include tag
-         */
-        $template = preg_replace_callback('/@include\(\s*(.+)\s*\)/', [$this, 'parseIncludeTag'], $template);
-
-        /**
-         * Echo tag (e.g. {{ $var }})
-         */
-        $template = preg_replace_callback('/{{\s*(.+?)\s*}}/', [$this, 'parseEchoTag'], $template);
-
-        /**
-         * If statement tags (e.g. @if(condition) ... @endif)
-         */
-        $template = preg_replace_callback('/@if\(\s*(.+)\s*\)/', [$this, 'parseIfTag'], $template);
-        $template = preg_replace_callback('/@else/', [$this, 'parseElseTag'], $template);
-        $template = preg_replace_callback('/@elseif\(\s*(.+)\s*\)/', [$this, 'parseElseIfTag'], $template);
-        $template = preg_replace_callback('/@endif/', [$this, 'parseClosingBrace'], $template);
-
-        /**
-         * Loop statement tags (e.g. @foreach($values as $key => $value) ... @endforeach)
-         */
-        $template = preg_replace_callback('/@foreach\(\s*(.+)\s*\)/', [$this, 'parseForeachTag'], $template);
-        $template = preg_replace_callback('/@endforeach/', [$this, 'parseClosingBrace'], $template);
-
-        /**
-         * Comment tags
-         */
-        $template = preg_replace_callback('/{--[\s\S]*?--}/', [$this, 'parseIntoNonexistence'], $template);
-
-        return $template;
-    }
-
-    /**
-     * Parse the echo tags in the template (e.g. {{ $foo }} becomes <?php echo($foo); ?>)
-     * 
-     * @param array $match
-     * @return string
-     */
-    private function parseEchoTag(array $match) : string
-    {
-        return "<?php echo htmlentities({$match[1]}); ?>";
-    }
-
-    /**
-     * Parse the if tags in the template (e.g. @if(condition) becomes <?php if($condition) { ?>)
-     * 
-     * @param array $match
-     * @return string
-     */
-    private function parseIfTag(array $match) : string
-    {
-        return "<?php if({$match[1]}) { ?>";
-    }
-
-    /**
-     * Parse the else tag for if statements! (e.g. @else becomes <?php } else { ?>)
-     * 
-     * @param array $match
-     * @return string
-     */
-    private function parseElseTag(array $match) : string
-    {
-        return "<?php } else { ?>";
-    }
-
-    /**
-     * Parse the else tag for if statements! (e.g. @else becomes <?php } else { ?>)
-     * 
-     * @param array $match
-     * @return string
-     */
-    private function parseElseIfTag(array $match) : string
-    {
-        return "<?php } elseif({$match[1]}) { ?>";
-    }
-
-    /**
-     * Parse the foreach tags in the template (e.g. @foreach(assignment) becomes <?php foreach(assignment) { ?>)
-     * 
-     * @param array $match
-     * @return string
-     */
-    private function parseForeachTag(array $match) : string
-    {
-        return "<?php foreach({$match[1]}) { ?>";
-    }
-
-    /**
-     * Parse the include tag so that it brings in the requested template
-     * 
-     * @param array $match
-     * @return string
-     */
-    private function parseIncludeTag(array $match) : string
-    {
-        $path = str_replace('.', '/', $match[1]);
-        $path = $this->directory . trim($path, "'") . $this->extension;
-
-        return $this->read($path);
-    }
-
-    /**
-     * Parse a tag into a closing brace for control structures
-     * 
-     * @param array $match
-     * @return string
-     */
-    private function parseIntoNonexistence(array $match) : string
-    {
-        return "";
-    }
-
-    /**
-     * Parse a tag into NONEXISTENCE (for comment tags)
-     * 
-     * @param array $match
-     * @return string
-     */
-    private function parseClosingBrace(array $match) : string
-    {
-        return "<?php } ?>";
-    }
-
-    /**
-     * Create the "cached" folder in the template directory if it doesn't exist
-     * 
-     * @return void
-     */
-    private function createCache()
-    {
-        $dir = $this->directory;
-
-        if (! file_exists($dir.'/cached')) {
-            mkdir($dir.'/cached');
+        if (!file_exists(self::$cache)) {
+            mkdir(self::$cache, 0744);
         }
     }
 
     /**
-     * This is the primary run function - it's given a path to the template
-     * relative to the class' $directory, and an optional array of values
-     * to pass to the template
-     * 
-     * @param string $template
-     * @param array $values
-     * @return string
+     * Recursively handle includes and extends directives, bringing each requested file's contents
+     * into the current working file.
      */
-    public function bake(string $template, array $values = [])
+    private static function handleIncludes(string $file): string
     {
-        $template = $this->find($template);
-        return $this->parse($template, $values);
+        $file = self::$views . $file . self::$extension;
+        $page = file_get_contents($file);
+
+        preg_match_all('/@(include|extends)\( ?\'(\w+)\' ?\)/i', $page, $matches, PREG_SET_ORDER);
+
+        // Recursively process includes and extends
+        foreach ($matches as $match) {
+            $page = str_replace($match[0], self::handleIncludes($match[2]), $page);
+        }
+
+        return preg_replace('/@(include|extends)\( ?\'(\w+)\' ?\)/i', '', $page);
     }
 
     /**
-     * A quick and easy static function for when you want to parse a string
-     * without all the fancy rules and stuff. Parses tags like {{ foo }}
-     * with values provided, e.g. ['foo' => 'bar']
-     * 
-     * @param string $template
-     * @param array $values
-     * @return $string
+     * Send the given page content through all our handler methods, to process directives.
      */
-    public static function simple(string $template, array $values = [])
+    private static function compile(string $page): string
     {
-        if (is_readable($template)) { $template = file_get_contents($template); }
+        $page = self::handleBlocks($page);
+        $page = self::handleYields($page);
+        $page = self::handleEchoes($page);
+        $page = self::handleEscapedEchoes($page);
+        $page = self::handlePHP($page);
 
-        return preg_replace_callback(
-            '/{{\s*([A-Za-z0-9_-]+)\s*}}/',
-            function($match) use ($values) {
-                return isset($values[$match[1]]) ? $values[$match[1]] : $match[0];
-            },
-            $template
-        );
+        return $page;
     }
+
+    /**
+     * Handle "blocks" of content for our yield() directive.
+     */
+    private static function handleBlocks(string $page): string
+    {
+        preg_match_all('/@block ?\( ?\'(\w*?)\' ?\)(.*?)@endblock/is', $page, $matches, PREG_SET_ORDER);
+
+        foreach ($matches as $match) {
+            if (!array_key_exists($match[1], self::$blocks)) {
+                self::$blocks[$match[1]] = '';
+            }
+
+            if (strpos($match[2], '@parent') === false) {
+                self::$blocks[$match[1]] = trim($match[2]);
+            } else {
+                self::$blocks[$match[1]] = trim(str_replace('@parent', self::$blocks[$match[1]], $match[2]));
+            }
+
+            $page = str_replace($match[0], '', $page);
+        }
+
+        return $page;
+    }
+
+    /**
+     * Process yield() directives with data stored in Modello::$blocks by our blocks handler.
+     */
+    private static function handleYields(string $page): string
+    {
+        foreach (self::$blocks as $key => $value) {
+            $page = preg_replace("/@yield ?\( ?'$key' ?\)/", $value, $page);
+		}
+
+		return preg_replace('/@yield ?\( ?\'(.*?)\' ?\)/i', '', $page);
+    }
+
+    /**
+     * Parse generic echo statements.
+     */
+    private static function handleEchoes(string $page): string
+    {
+        return preg_replace('/\{{\s*(.+?)\s*\}}/is', '<?php echo $1; ?>', $page);
+    }
+
+    /**
+     * Parse escaped echo statements.
+     */
+    private static function handleEscapedEchoes(string $page): string
+    {
+        return preg_replace('/\{{{\s*(.+?)\s*\}}}/is', '<?php echo htmlentities($1, ENT_QUOTES, \'UTF-8\'); ?>', $page);
+    }
+
+    /**
+     * Parse a PHP block by simply throwing everything between them into PHP tags.
+     */
+    private static function handlePHP(string $page): string
+    {
+		return preg_replace('/@php(.*?)@endphp/is', '<?php $1 ?>', $page);
+	}
 }
