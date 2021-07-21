@@ -30,6 +30,38 @@ class Modello
     private static array $blocks = [];
 
     /**
+     * Set the directory that views will be looked for in.
+     */
+    public static function setViews(string $views): string
+    {
+        return self::$views = $views;
+    }
+
+    /**
+     * Set where the compiled views will be cached.
+     */
+    public static function setCache(string $cache): string
+    {
+        return self::$cache = $cache;
+    }
+
+    /**
+     * Set whether or not the cache is enabled; whether all views should be compiled every run.
+     */
+    public static function setCacheEnabled(bool $enabled): bool
+    {
+        return self::$cacheEnabled = $enabled;
+    }
+
+    /**
+     * Set the extension of the view files.
+     */
+    public static function setExtension(string $extension): string
+    {
+        return self::$extension = $extension;
+    }
+
+    /**
      * Takes a given file path and an array of data, and processes the given file (if it exists)
      * according to the rules of the engine. Returns nothing, but uses require to "call" the compiled
      * script.
@@ -108,6 +140,9 @@ class Modello
         $page = self::handleEchoes($page);
         $page = self::handleEscapedEchoes($page);
         $page = self::handlePHP($page);
+        $page = self::handleIf($page);
+        $page = self::handleElse($page);
+        $page = self::handleForeach($page);
 
         return $page;
     }
@@ -170,5 +205,29 @@ class Modello
     private static function handlePHP(string $page): string
     {
 		return preg_replace('/@php(.*?)@endphp/is', '<?php $1 ?>', $page);
+	}
+
+    /**
+     * Parse the @if directive with basic replacement strategy
+     */
+    private static function handleIf(string $page): string
+    {
+		return preg_replace('/@if ?\( ?(.*?) ?\)(.*?)@endif/is', '<?php if ($1) { ?> $2 <?php } ?>', $page);
+	}
+
+    /**
+     * Parse the @else directive with basic replacement strategy
+     */
+    private static function handleElse(string $page): string
+    {
+		return preg_replace('/@else/i', '<?php } else { ?>', $page);
+	}
+
+    /**
+     * Parse the @foreach directive with basic replacement strategy
+     */
+    private static function handleForeach(string $page): string
+    {
+		return preg_replace('/@foreach ?\( ?(.*?) ?\)(.*?)@endforeach/is', '<?php foreach ($1) { ?> $2 <?php } ?>', $page);
 	}
 }

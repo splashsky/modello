@@ -5,5 +5,15 @@
 @block ('name') Wiener @endblock
 
 @block('content')
-Are you a fool
+Howdy doo!
+
+    @if ($reee === true)
+        REEEEEEEE
+    @endif
+
+    <ul>
+        @foreach ($kids as $kid)
+            <li>{{ $kid }} @if ($reee) REEEEEEE @endif</li>
+        @endforeach
+    </ul>
 @endblock

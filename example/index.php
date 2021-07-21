@@ -8,4 +8,4 @@ error_reporting(E_ALL);
 
 require '../src/Splashsky/Modello.php';
 
-Modello::view('page', ['reee' => true]);
+Modello::view('page', ['reee' => false, 'kids' => ['chowder', 'leo', 'max']]);
