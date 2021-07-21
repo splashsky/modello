@@ -30,6 +30,22 @@ class Modello
     private static array $blocks = [];
 
     /**
+     * An array containing references to all handling methods.
+     */
+    private static array $handlers = [
+        'handleBlocks',
+        'handleYields',
+        'handleEchoes',
+        'handleEscapedEchoes',
+        'handlePHP',
+        'handleIf',
+        'handleElse',
+        'handleElseIf',
+        'handleForeach',
+        'handleComment'
+    ];
+
+    /**
      * Set the directory that views will be looked for in.
      */
     public static function setViews(string $views): string
@@ -135,15 +151,10 @@ class Modello
      */
     private static function compile(string $page): string
     {
-        $page = self::handleBlocks($page);
-        $page = self::handleYields($page);
-        $page = self::handleEchoes($page);
-        $page = self::handleEscapedEchoes($page);
-        $page = self::handlePHP($page);
-        $page = self::handleIf($page);
-        $page = self::handleElse($page);
-        $page = self::handleForeach($page);
-
+        foreach (self::$handlers as $handler) {
+            $page = self::$handler($page);
+        }
+        
         return $page;
     }
 
@@ -216,11 +227,19 @@ class Modello
 	}
 
     /**
+     * Parse the @elseif directive with basic replacement strategy
+     */
+    private static function handleElseIf(string $page): string
+    {
+		return preg_replace('/@elseif ?\( ?(.*?) ?\)/is', '<?php } else if ($1) { ?>', $page);
+	}
+
+    /**
      * Parse the @else directive with basic replacement strategy
      */
     private static function handleElse(string $page): string
     {
-		return preg_replace('/@else/i', '<?php } else { ?>', $page);
+		return preg_replace('/@else[^if]/i', '<?php } else { ?>', $page);
 	}
 
     /**
@@ -229,5 +248,13 @@ class Modello
     private static function handleForeach(string $page): string
     {
 		return preg_replace('/@foreach ?\( ?(.*?) ?\)(.*?)@endforeach/is', '<?php foreach ($1) { ?> $2 <?php } ?>', $page);
+	}
+
+    /**
+     * Get rid of all template comments via simple replace
+     */
+    private static function handleComment(string $page): string
+    {
+		return preg_replace('/{--(.*?)--}/is', '', $page);
 	}
 }
