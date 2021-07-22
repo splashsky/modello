@@ -1,6 +1,6 @@
 <?php
 
-namespace Splashsky;
+namespace Splashsky\Modello;
 
 class Modello
 {
