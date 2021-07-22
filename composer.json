@@ -13,5 +13,8 @@
             "role": "Developer"
         }
     ],
+    "autoload": {
+        "psr-4": {"Splashsky\\Modello\\": "src/"}
+    },
     "require": {}
 }
