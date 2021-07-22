@@ -50,6 +50,8 @@ class Modello
      */
     public static function setViews(string $views): string
     {
+        $views = trim($views);
+        if ($views[-1] != '/') { $views .= '/'; }
         return self::$views = $views;
     }
 
@@ -58,6 +60,8 @@ class Modello
      */
     public static function setCache(string $cache): string
     {
+        $cache = trim($cache);
+        if ($cache[-1] != '/') { $cache .= '/'; }
         return self::$cache = $cache;
     }
 
