@@ -64,6 +64,38 @@ class Modello
     }
 
     /**
+     * Set the path to the views that Modellp will use.
+     */
+    public static function setViews(string $views): string
+    {
+        return self::$views = $views;
+    }
+
+    /**
+     * Set the path for the view cache.
+     */
+    public static function setCache(string $cache): string
+    {
+        return self::$cache = $cache;
+    }
+
+    /**
+     * Set whether or not the caching function is enabled.
+     */
+    public static function setCacheEnabled(bool $enabled): bool
+    {
+        return self::$cacheEnabled = $enabled;
+    }
+
+    /**
+     * Set the extension that Modello expects when looking for view templates.
+     */
+    public static function setExtension(string $extension): string
+    {
+        return self::$extension = $extension;
+    }
+
+    /**
      * Compile the given view; $view takes the name of the view file for file naming purposes, and
      * $template takes all the content of a view template file
      */
