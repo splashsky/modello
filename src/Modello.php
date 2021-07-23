@@ -5,34 +5,35 @@ namespace Splashsky;
 class Modello
 {
     /**
-     * Defaults to 'views/'. The directory in which we look for view templates, and where we make the cache.
+     * The path where Modello looks for view templates
      */
     private static string $views = 'views/';
 
     /**
-     * Defaults to 'views/cache/'. The directory we create to store cached files.
+     * The path where Modello caches compiled views
      */
     private static string $cache = 'views/cache/';
 
     /**
-     * Defaults to '.html'. The file extension we expect when reading files.
-     */
-    private static string $extension = '.html';
-
-    /**
-     * Defaults to false. Whether or not we'll serve cached files or recompile them every request.
+     * Whether or not Modello should serve cached views or recompile every view() call
      */
     private static bool $cacheEnabled = false;
 
     /**
-     * Stores the blocks we're working with in the current file.
+     * The extension that Modello expects on view template files
+     */
+    private static string $extension = '.mllo.php';
+
+    /**
+     * An array of stored blocks, to insert data through extended/included views
      */
     private static array $blocks = [];
 
     /**
-     * An array containing references to all handling methods.
+     * An array of all parsers and handlers in Modello
      */
     private static array $handlers = [
+        'handleIncludes',
         'handleBlocks',
         'handleYields',
         'handleEchoes',
@@ -46,79 +47,84 @@ class Modello
     ];
 
     /**
-     * Set the directory that views will be looked for in.
+     * Compile and render the given view file! $view accepts dot notation, and looks in the $views path.
      */
-    public static function setViews(string $views): string
+    public static function view(string $view, array $data = []): void
     {
-        return self::$views = $views;
-    }
-
-    /**
-     * Set where the compiled views will be cached.
-     */
-    public static function setCache(string $cache): string
-    {
-        return self::$cache = $cache;
-    }
-
-    /**
-     * Set whether or not the cache is enabled; whether all views should be compiled every run.
-     */
-    public static function setCacheEnabled(bool $enabled): bool
-    {
-        return self::$cacheEnabled = $enabled;
-    }
-
-    /**
-     * Set the extension of the view files.
-     */
-    public static function setExtension(string $extension): string
-    {
-        return self::$extension = $extension;
-    }
-
-    /**
-     * Takes a given file path and an array of data, and processes the given file (if it exists)
-     * according to the rules of the engine. Returns nothing, but uses require to "call" the compiled
-     * script.
-     *
-     * @param string $file The path to a file to read. Prepended with Modello::$views
-     * @param array $data Defaults to an empty array. An optional array of data to pass to the compiler.
-     */
-    public static function view(string $file, array $data = []): void
-    {
-        $cached = self::cache($file);
-        extract($data, EXTR_SKIP);
-        require $cached;
-    }
-
-    /**
-     * Determines whether the given file needs to be cached, or if it needs to be remade. If the file
-     * needs recompiled (or compiled for the first time) that process kicks off here. Returns the path
-     * to the compiled/cached file.
-     */
-    private static function cache(string $file): string
-    {
+        // If no cache directory exists, create it
         self::makeCacheDirectory();
 
-        $cached = self::$cache . str_replace(['/', self::$extension], ['-', ''], "$file.php");
-        $filePath = self::$views . $file . self::$extension;
+        // Get the path to the view template, then if we can read it compile it and render it
+        $viewPath = self::makeViewPath($view);
+        if ($template = self::read($viewPath)) {
+            $compiled = self::compile($view, $template);
+            extract($data, EXTR_SKIP);
+            require $compiled;
+        }
+    }
 
-        // If the cache is disabled, or if the file isn't cached, or if it's been recently modified,
-        // (re)compile the file and throw it in the cache
-        if (!self::$cacheEnabled || !file_exists($cached) || filemtime($cached) < filemtime($filePath)) {
-            $page = self::handleIncludes($file);
-            $page = self::compile($page);
+    /**
+     * Compile the given view; $view takes the name of the view file for file naming purposes, and
+     * $template takes all the content of a view template file
+     */
+    private static function compile(string $view, string $template): string
+    {
+        // Get the paths to both the view template and the cached file
+        $viewPath = self::makeCachePath($view);
+        $cached = self::makeCachePath($view);
 
-            $timestamp = '<!-- Cached on '.date('jS F Y h:i:s A').' -->' . PHP_EOL;
-            file_put_contents($cached, $timestamp . $page);
+        // If there's a cached view and we don't need to recompile it, we'll just return the
+        // path to the cached view
+        if (!self::viewNeedsRecompiled($viewPath, $cached)) {
+            return $cached;
         }
 
+        // Process the template content through every handler Modello has registered
+        foreach (self::$handlers as $handler) {
+            $template = self::$handler($template);
+        }
+
+        // Since at this point we know we needed to (re)compile the view, we'll write the
+        // compiled view to the cached view path
+        self::makeCachedView($template, $cached);
+
+        // Return the path to the cached view
         return $cached;
     }
 
     /**
-     * If the cache directory (Modello::$cache) doesn't exist, create it.
+     * Attempt to read the given file. If it doesn't exist, throw an Exception.
+     */
+    private static function read(string $file)
+    {
+        if (!file_exists($file)) {
+            throw new \Exception("$file doesn't exist.");
+        }
+
+        return file_get_contents($file);
+    }
+
+    /**
+     * Turn the given view name into the path to the view file.
+     */
+    private static function makeViewPath(string $view): string
+    {
+        // 'layouts.main' => 'views/layouts/main.mllo.php'
+        return self::$views . str_replace('.', '/', $view) . self::$extension;
+    }
+
+    /**
+     * Turn the given view name into the path to the cached view file.
+     */
+    private static function makeCachePath(string $view): string
+    {
+        // 'foo.bar' => 'views/cache/foo-bar.php'
+        return self::$cache . str_replace('.', '-', $view) . '.php';
+    }
+
+    /**
+     * If the cache directory Modello has ($cache) doesn't exist, create it with
+     * 0744 permissions.
      */
     private static function makeCacheDirectory(): void
     {
@@ -128,34 +134,41 @@ class Modello
     }
 
     /**
-     * Recursively handle includes and extends directives, bringing each requested file's contents
-     * into the current working file.
+     * Generate the cached view file by putting the compiled view content into a file, prepended
+     * with an HTML comment containing the date and time the view was cached.
      */
-    private static function handleIncludes(string $file): string
+    private static function makeCachedView(string $view, string $path): void
     {
-        $file = self::$views . $file . self::$extension;
-        $page = file_get_contents($file);
-
-        preg_match_all('/@(include|extends)\( ?\'(\w+)\' ?\)/i', $page, $matches, PREG_SET_ORDER);
-
-        // Recursively process includes and extends
-        foreach ($matches as $match) {
-            $page = str_replace($match[0], self::handleIncludes($match[2]), $page);
-        }
-
-        return preg_replace('/@(include|extends)\( ?\'(\w+)\' ?\)/i', '', $page);
+        $timestamp = '<!-- Cached on '.date('jS F Y h:i:s A').' -->' . PHP_EOL;
+        file_put_contents($path, $timestamp . $view);
     }
 
     /**
-     * Send the given page content through all our handler methods, to process directives.
+     * Determine whether or not the given view at the path $view needs to be recompiled.
      */
-    private static function compile(string $page): string
+    private static function viewNeedsRecompiled(string $view, string $cached): bool
     {
-        foreach (self::$handlers as $handler) {
-            $page = self::$handler($page);
+        if (!self::$cacheEnabled || !file_exists($cached) || filemtime($cached) < filemtime($view)) {
+            return true;
         }
-        
-        return $page;
+
+        return false;
+    }
+
+    /**
+     * Handle the almighty @include and @extend directive by recursively pulling in other view templates.
+     */
+    private static function handleIncludes(string $view): string
+    {
+        preg_match_all('/@(include|extends)\( ?\'(\w+)\' ?\)/i', $view, $matches, PREG_SET_ORDER);
+
+        // Recursively process includes and extends
+        foreach ($matches as $match) {
+            $included = self::read(self::makeViewPath($match[2]));
+            $view = str_replace($match[0], self::handleIncludes($included), $view);
+        }
+
+        return preg_replace('/@(include|extends)\( ?\'(\w+)\' ?\)/i', '', $view);
     }
 
     /**
