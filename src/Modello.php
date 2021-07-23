@@ -192,7 +192,7 @@ class Modello
      */
     private static function handleIncludes(string $view): string
     {
-        preg_match_all('/@(include|extends)\( ?\'(\w+)\' ?\)/i', $view, $matches, PREG_SET_ORDER);
+        preg_match_all('/@(include|extends)\( ?\'(.*?)\' ?\)/i', $view, $matches, PREG_SET_ORDER);
 
         // Recursively process includes and extends
         foreach ($matches as $match) {
@@ -200,7 +200,7 @@ class Modello
             $view = str_replace($match[0], self::handleIncludes($included), $view);
         }
 
-        return preg_replace('/@(include|extends)\( ?\'(\w+)\' ?\)/i', '', $view);
+        return preg_replace('/@(include|extends)\( ?\'(.*?)\' ?\)/i', '', $view);
     }
 
     /**
