@@ -6,7 +6,7 @@ class Modello
 {
     private string $views = 'views/';
     private string $cache = 'cache/views/';
-    private bool $cacheEnabled = false;
+    private bool $cacheEnabled = true;
     private string $extension = '.mllo.php';
 
     // Stored blocks. Enables the @yield directive!
@@ -95,7 +95,7 @@ class Modello
     private function compile(string $view, string $template): string
     {
         // Get the paths to both the view template and the cached file
-        $viewPath = $this->makeCachePath($view);
+        $viewPath = $this->makeViewPath($view);
         $cached = $this->makeCachePath($view);
 
         // If there's a cached view and we don't need to recompile it, we'll just return the
@@ -118,12 +118,9 @@ class Modello
     }
 
     // Read the given $file or throw an exception.
-    private function read(string $file)
+    private function read(string $file): string|false
     {
-        if (!file_exists($file)) {
-            throw new \Exception("$file doesn't exist.");
-        }
-
+        if (!file_exists($file)) { return false; }
         return file_get_contents($file);
     }
 
@@ -159,11 +156,36 @@ class Modello
     // Determine whether we need to recompile the given $view. Always yes if $this->cacheEnabled is false.
     private function viewNeedsRecompiled(string $view, string $cached): bool
     {
+        // Any of these conditions means immediate recompile
         if (!$this->cacheEnabled || !file_exists($cached) || filemtime($cached) < filemtime($view)) {
             return true;
         }
 
+        // Perform a check on linked includes.
+        if ($this->checkIncludesChanged($view, filemtime($cached))) {
+            return true;
+        }
+
         return false;
+    }
+
+    // Used for recursively checking includes against the current cached file, to see if recompile is needed.
+    private function checkIncludesChanged(string $template, int $cachedMTime)
+    {
+        $recompile = false;
+        $content = $this->read($template);
+
+        preg_match_all('/@(?:include|extends)\( ?\'(.*?)\' ?\)/i', $content, $matches, PREG_SET_ORDER);
+        if (empty($matches)) { return false; }
+
+        foreach ($matches as $match) {
+            $path = $this->makeViewPath($match[1]);
+            if (!$this->read($path)) { continue; }
+            if ($cachedMTime < filemtime($path)) { return true; }
+            $recompile = $this->checkIncludesChanged($path, $cachedMTime);
+        }
+
+        return $recompile;
     }
 
     // Handle view includes/extension by recursively grabbing view files and parsing them in.
