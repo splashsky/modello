@@ -90,6 +90,15 @@ Modello uses template syntax very similar (basically identical) to Laravel Blade
 @endblock
 
 @yield('foo') // Outputs: something here
+
+// Add block conditionals
+@hasblock('foo')
+if block foo exists, this will be output!
+@endif
+
+@blockmissing('bar')
+if the bar block doesn't exist, this will be put out!
+@endif
 ```
 
 As long as the data you provide the directives is valid PHP, it will work!
