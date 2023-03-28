@@ -6,7 +6,7 @@ class Modello
 {
     private string $views = 'views/';
     private string $cache = 'cache/views/';
-    private bool $cacheEnabled = true;
+    private bool $cacheEnabled = false;
     private string $extension = '.mllo.php';
 
     // Stored blocks. Enables the @yield directive!
@@ -16,6 +16,8 @@ class Modello
     private array $handlers = [
         'handleIncludes',
         'handleBlocks',
+        'handleHasBlock',
+        'handleBlockMissing',
         'handleYields',
         'handleEchoes',
         'handleEscapedEchoes',
@@ -253,6 +255,32 @@ class Modello
     {
 		return preg_replace('/{--(.*?)--}/is', '', $page);
 	}
+
+    // A directive to test whether we have a block by a given key
+    function handleHasBlock(string $page): string
+    {
+        preg_match_all('/@hasblock\( ?\'(\w*?)\' ?\)(.*?)@endif/is', $page, $matches, PREG_SET_ORDER);
+        
+        foreach ($matches as $match) {
+            $replace = array_key_exists($match[1], $this->blocks) ? $match[2] : '';
+            $page = str_replace($match[0], $replace, $page);
+        }
+
+        return $page;
+    }
+
+    // Directive that does the opposite of @hasblock
+    function handleBlockMissing(string $page): string
+    {
+        preg_match_all('/@blockmissing\( ?\'(\w*?)\' ?\)(.*?)@endif/is', $page, $matches, PREG_SET_ORDER);
+        
+        foreach ($matches as $match) {
+            $replace = !array_key_exists($match[1], $this->blocks) ? $match[2] : '';
+            $page = str_replace($match[0], $replace, $page);
+        }
+
+        return $page;
+    }
 
     /**
      * Quickly parse the given $string with key => value pairs in $data. {{ foo }} + ['foo' => 'bar'] = bar
