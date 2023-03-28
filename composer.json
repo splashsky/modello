@@ -3,7 +3,7 @@
     "description": "A simple, lightweight template compiler",
     "type": "package",
     "keywords": ["compiler", "template", "engine", "parser"],
-    "homepage": "https://surf.gg",
+    "homepage": "https://sharkk.net",
     "license": "MIT",
     "authors": [
         {

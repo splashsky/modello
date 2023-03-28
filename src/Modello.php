@@ -4,35 +4,16 @@ namespace Splashsky;
 
 class Modello
 {
-    /**
-     * The path where Modello looks for view templates
-     */
-    private static string $views = 'views/';
+    private string $views = 'views/';
+    private string $cache = 'cache/views/';
+    private bool $cacheEnabled = true;
+    private string $extension = '.mllo.php';
 
-    /**
-     * The path where Modello caches compiled views
-     */
-    private static string $cache = 'views/cache/';
+    // Stored blocks. Enables the @yield directive!
+    private array $blocks = [];
 
-    /**
-     * Whether or not Modello should serve cached views or recompile every view() call
-     */
-    private static bool $cacheEnabled = false;
-
-    /**
-     * The extension that Modello expects on view template files
-     */
-    private static string $extension = '.mllo.php';
-
-    /**
-     * An array of stored blocks, to insert data through extended/included views
-     */
-    private static array $blocks = [];
-
-    /**
-     * An array of all parsers and handlers in Modello
-     */
-    private static array $handlers = [
+    // The function names of the internal directive handlers.
+    private array $handlers = [
         'handleIncludes',
         'handleBlocks',
         'handleYields',
@@ -47,87 +28,91 @@ class Modello
     ];
 
     /**
+     * Create an instance of Modello, and optionally pass a new viewPath and cachePath. Defaults to 'views/' and 'cache/views/' respectively.
+     */
+    public function __construct(string $viewPath = '', string $cachePath = '')
+    {
+        $this->views = empty($viewPath) ? 'views/' : $viewPath;
+        $this->cache = empty($cachePath) ? 'cache/views/' : $cachePath;
+    }
+
+    /**
      * Compile and render the given view file! $view accepts dot notation, and looks in the $views path.
      */
-    public static function view(string $view, array $data = []): void
+    public function view(string $view, array $data = []): void
     {
         // If no cache directory exists, create it
-        self::makeCacheDirectory();
+        $this->makeCacheDirectory();
 
         // Get the path to the view template, then if we can read it compile it and render it
-        $viewPath = self::makeViewPath($view);
-        if ($template = self::read($viewPath)) {
-            $compiled = self::compile($view, $template);
+        $viewPath = $this->makeViewPath($view);
+        if ($template = $this->read($viewPath)) {
+            $compiled = $this->compile($view, $template);
             extract($data, EXTR_SKIP);
             require $compiled;
         }
     }
 
     /**
-     * Set the path to the views that Modellp will use.
+     * Set the path to the views that Modello will use.
      */
-    public static function setViews(string $views): string
+    public function setViews(string $views): string
     {
-        return self::$views = $views;
+        return $this->views = $views;
     }
 
     /**
      * Set the path for the view cache.
      */
-    public static function setCache(string $cache): string
+    public function setCache(string $cache): string
     {
-        return self::$cache = $cache;
+        return $this->cache = $cache;
     }
 
     /**
      * Set whether or not the caching function is enabled.
      */
-    public static function setCacheEnabled(bool $enabled): bool
+    public function setCacheEnabled(bool $enabled): bool
     {
-        return self::$cacheEnabled = $enabled;
+        return $this->cacheEnabled = $enabled;
     }
 
     /**
      * Set the extension that Modello expects when looking for view templates.
      */
-    public static function setExtension(string $extension): string
+    public function setExtension(string $extension): string
     {
-        return self::$extension = $extension;
+        return $this->extension = $extension;
     }
 
-    /**
-     * Compile the given view; $view takes the name of the view file for file naming purposes, and
-     * $template takes all the content of a view template file
-     */
-    private static function compile(string $view, string $template): string
+    // Compile the given view. $view takes the path to the template file, $template takes the content.
+    private function compile(string $view, string $template): string
     {
         // Get the paths to both the view template and the cached file
-        $viewPath = self::makeCachePath($view);
-        $cached = self::makeCachePath($view);
+        $viewPath = $this->makeCachePath($view);
+        $cached = $this->makeCachePath($view);
 
         // If there's a cached view and we don't need to recompile it, we'll just return the
         // path to the cached view
-        if (!self::viewNeedsRecompiled($viewPath, $cached)) {
+        if (!$this->viewNeedsRecompiled($viewPath, $cached)) {
             return $cached;
         }
 
         // Process the template content through every handler Modello has registered
-        foreach (self::$handlers as $handler) {
-            $template = self::$handler($template);
+        foreach ($this->handlers as $handler) {
+            $template = $this->$handler($template);
         }
 
         // Since at this point we know we needed to (re)compile the view, we'll write the
         // compiled view to the cached view path
-        self::makeCachedView($template, $cached);
+        $this->makeCachedView($template, $cached);
 
         // Return the path to the cached view
         return $cached;
     }
 
-    /**
-     * Attempt to read the given file. If it doesn't exist, throw an Exception.
-     */
-    private static function read(string $file)
+    // Read the given $file or throw an exception.
+    private function read(string $file)
     {
         if (!file_exists($file)) {
             throw new \Exception("$file doesn't exist.");
@@ -136,89 +121,73 @@ class Modello
         return file_get_contents($file);
     }
 
-    /**
-     * Turn the given view name into the path to the view file.
-     */
-    private static function makeViewPath(string $view): string
+    // Turn a given $view path into a real path.
+    private function makeViewPath(string $view): string
     {
         // 'layouts.main' => 'views/layouts/main.mllo.php'
-        return self::$views . str_replace('.', '/', $view) . self::$extension;
+        return $this->views . str_replace('.', '/', $view) . $this->extension;
     }
 
-    /**
-     * Turn the given view name into the path to the cached view file.
-     */
-    private static function makeCachePath(string $view): string
+    // Turn a given $view path into a real path for the compiled/cached view file.
+    private function makeCachePath(string $view): string
     {
-        // 'foo.bar' => 'views/cache/foo-bar.php'
-        return self::$cache . str_replace('.', '-', $view) . '.php';
+        // 'foo.bar' => 'cache/views/foo-bar.php'
+        return $this->cache . str_replace('.', '-', $view) . '.php';
     }
 
-    /**
-     * If the cache directory Modello has ($cache) doesn't exist, create it with
-     * 0744 permissions.
-     */
-    private static function makeCacheDirectory(): void
+    // Create the $this->cache directory with 0744 perms, if it doesn't exist.
+    private function makeCacheDirectory(): void
     {
-        if (!file_exists(self::$cache)) {
-            mkdir(self::$cache, 0744);
+        if (!file_exists($this->cache)) {
+            mkdir($this->cache, 0744);
         }
     }
 
-    /**
-     * Generate the cached view file by putting the compiled view content into a file, prepended
-     * with an HTML comment containing the date and time the view was cached.
-     */
-    private static function makeCachedView(string $view, string $path): void
+    // Create the compiled/cached view file and prepend a timestamp of now.
+    private function makeCachedView(string $view, string $path): void
     {
         $timestamp = '<!-- Cached on '.date('jS F Y h:i:s A').' -->' . PHP_EOL;
         file_put_contents($path, $timestamp . $view);
     }
 
-    /**
-     * Determine whether or not the given view at the path $view needs to be recompiled.
-     */
-    private static function viewNeedsRecompiled(string $view, string $cached): bool
+    // Determine whether we need to recompile the given $view. Always yes if $this->cacheEnabled is false.
+    private function viewNeedsRecompiled(string $view, string $cached): bool
     {
-        if (!self::$cacheEnabled || !file_exists($cached) || filemtime($cached) < filemtime($view)) {
+        if (!$this->cacheEnabled || !file_exists($cached) || filemtime($cached) < filemtime($view)) {
             return true;
         }
 
         return false;
     }
 
-    /**
-     * Handle the almighty @include and @extend directive by recursively pulling in other view templates.
-     */
-    private static function handleIncludes(string $view): string
+    // Handle view includes/extension by recursively grabbing view files and parsing them in.
+    private function handleIncludes(string $view): string
     {
         preg_match_all('/@(include|extends)\( ?\'(.*?)\' ?\)/i', $view, $matches, PREG_SET_ORDER);
 
         // Recursively process includes and extends
         foreach ($matches as $match) {
-            $included = self::read(self::makeViewPath($match[2]));
-            $view = str_replace($match[0], self::handleIncludes($included), $view);
+            $included = $this->read($this->makeViewPath($match[2]));
+            $view = str_replace($match[0], $this->handleIncludes($included), $view);
         }
 
         return preg_replace('/@(include|extends)\( ?\'(.*?)\' ?\)/i', '', $view);
     }
 
-    /**
-     * Handle "blocks" of content for our yield() directive.
-     */
-    private static function handleBlocks(string $page): string
+    // Grab @block directives so we can have data to fill potenital @yield directives.
+    private function handleBlocks(string $page): string
     {
-        preg_match_all('/@block ?\( ?\'(\w*?)\' ?\)(.*?)@endblock/is', $page, $matches, PREG_SET_ORDER);
+        preg_match_all('/@block\( ?\'(\w*?)\' ?\)(.*?)@endblock/is', $page, $matches, PREG_SET_ORDER);
 
         foreach ($matches as $match) {
-            if (!array_key_exists($match[1], self::$blocks)) {
-                self::$blocks[$match[1]] = '';
+            if (!array_key_exists($match[1], $this->blocks)) {
+                $this->blocks[$match[1]] = '';
             }
 
             if (strpos($match[2], '@parent') === false) {
-                self::$blocks[$match[1]] = trim($match[2]);
+                $this->blocks[$match[1]] = trim($match[2]);
             } else {
-                self::$blocks[$match[1]] = trim(str_replace('@parent', self::$blocks[$match[1]], $match[2]));
+                $this->blocks[$match[1]] = trim(str_replace('@parent', $this->blocks[$match[1]], $match[2]));
             }
 
             $page = str_replace($match[0], '', $page);
@@ -227,79 +196,75 @@ class Modello
         return $page;
     }
 
-    /**
-     * Process yield() directives with data stored in Modello::$blocks by our blocks handler.
-     */
-    private static function handleYields(string $page): string
+    // Replace @yield directives with the @block data, if the given key exists. Blank it out otherwise.
+    private function handleYields(string $page): string
     {
-        foreach (self::$blocks as $key => $value) {
-            $page = preg_replace("/@yield ?\( ?'$key' ?\)/", $value, $page);
+        foreach ($this->blocks as $key => $value) {
+            $page = str_replace("@yield('$key')", $value, $page);
 		}
 
-		return preg_replace('/@yield ?\( ?\'(.*?)\' ?\)/i', '', $page);
+		return preg_replace('/@yield\(\'(.*?)\'\)/i', '', $page);
     }
 
-    /**
-     * Parse generic echo statements.
-     */
-    private static function handleEchoes(string $page): string
+    // Echo!
+    private function handleEchoes(string $page): string
     {
         return preg_replace('/\{{\s*(.+?)\s*\}}/is', '<?php echo $1; ?>', $page);
     }
 
-    /**
-     * Parse escaped echo statements.
-     */
-    private static function handleEscapedEchoes(string $page): string
+    // THE ECHO ESCAPED!
+    private function handleEscapedEchoes(string $page): string
     {
         return preg_replace('/\{{{\s*(.+?)\s*\}}}/is', '<?php echo htmlentities($1, ENT_QUOTES, \'UTF-8\'); ?>', $page);
     }
 
-    /**
-     * Parse a PHP block by simply throwing everything between them into PHP tags.
-     */
-    private static function handlePHP(string $page): string
+    // Put everything in @php in <?php
+    private function handlePHP(string $page): string
     {
-		return preg_replace('/@php(.*?)@endphp/is', '<?php $1 ?>', $page);
+		return preg_replace('/@php(.*?)@endphp\b/is', '<?php $1 ?>', $page);
 	}
 
-    /**
-     * Parse the @if directive with basic replacement strategy
-     */
-    private static function handleIf(string $page): string
+    // Handle @if with a cryptic-looking regex. The most useful control structure!
+    private function handleIf(string $page): string
     {
-		return preg_replace('/@if ?\( ?(.*?) ?\)(.*?)@endif/is', '<?php if ($1) { ?> $2 <?php } ?>', $page);
+		return preg_replace('/@if ?(\(((?:[^()]++|(?1))*)\))(.*?)@endif\b/is', '<?php if ($2) { ?>$3<?php } ?>', $page);
 	}
 
-    /**
-     * Parse the @elseif directive with basic replacement strategy
-     */
-    private static function handleElseIf(string $page): string
+    // Use the same cryptic regex to do @elseif
+    private function handleElseIf(string $page): string
     {
-		return preg_replace('/@elseif ?\( ?(.*?) ?\)/is', '<?php } else if ($1) { ?>', $page);
+		return preg_replace('/@elseif ?(\(((?:[^()]++|(?1))*)\))/is', '<?php } else if ($2) { ?>', $page);
 	}
 
-    /**
-     * Parse the @else directive with basic replacement strategy
-     */
-    private static function handleElse(string $page): string
+    // Else.
+    private function handleElse(string $page): string
     {
 		return preg_replace('/@else[^if]/i', '<?php } else { ?>', $page);
 	}
 
-    /**
-     * Parse the @foreach directive with basic replacement strategy
-     */
-    private static function handleForeach(string $page): string
+    // Third time's the charm for this regex. This time, the most useful loop, @foreach!
+    private function handleForeach(string $page): string
     {
-		return preg_replace('/@foreach ?\( ?(.*?) ?\)(.*?)@endforeach/is', '<?php foreach ($1) { ?> $2 <?php } ?>', $page);
+		return preg_replace('/@foreach ?(\(((?:[^()]++|(?1))*)\))(.*?)@endforeach\b/is', '<?php foreach ($2) { ?>$3<?php } ?>', $page);
 	}
 
-    /**
-     * Get rid of all template comments via simple replace
-     */
-    private static function handleComment(string $page): string
+    // Make comments disappear. Won't show up in the cached view, either.
+    private function handleComment(string $page): string
     {
 		return preg_replace('/{--(.*?)--}/is', '', $page);
 	}
+
+    /**
+     * Quickly parse the given $string with key => value pairs in $data. {{ foo }} + ['foo' => 'bar'] = bar
+     */
+    public static function parse(string $string, array $data): string
+    {
+        return preg_replace_callback(
+            '/{{\s*([A-Za-z0-9_-]+)\s*}}/',
+            function($match) use ($data) {
+                return isset($data[$match[1]]) ? $data[$match[1]] : $match[0];
+            },
+            $string
+        );
+    }
 }
