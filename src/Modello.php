@@ -41,7 +41,7 @@ class Modello
     /**
      * Compile and render the given view file! $view accepts dot notation, and looks in the $views path.
      */
-    public function view(string $view, array $data = []): void
+    public function view(string $view, array $data = []): string
     {
         // If no cache directory exists, create it
         $this->makeCacheDirectory();
@@ -50,8 +50,12 @@ class Modello
         $viewPath = $this->makeViewPath($view);
         if ($template = $this->read($viewPath)) {
             $compiled = $this->compile($view, $template);
+
+            // Render the view in an output buffer sandbox and return the results.
+            ob_start();
             extract($data, EXTR_SKIP);
             require $compiled;
+            return ob_get_clean();
         }
     }
 
