@@ -32,7 +32,9 @@ $modello = new Modello('path/to/views', 'path/to/cache');
 The first argument for the constructor tells Modello where your template directory is, and this will be the root from which Modello looks for template files. The second argument tells Modello where to create the compiled views.
 
 `$modello->setViews(string $viewPath)` and `$modello->setCache(string $cachePath)` are available to change the views and cache directories at runtime.
+
 Using `$modello->setExtension(string $extension)` allows you to change the extension Modello looks for on template files - by default this is `.mllo.php`.
+
 You can use `$modello->setCacheEnabled(bool $enabled)` to enable or disable caching - disabled means that Modello will re-compile the view on every render.
 
 ## How do I compile a template?
