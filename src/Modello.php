@@ -39,9 +39,9 @@ class Modello
     }
 
     /**
-     * Compile and render the given view file! $view accepts dot notation, and looks in the $views path.
+     * Compile and render the given view file! $view accepts dot notation, and looks in the $views path. Returns false on failure.
      */
-    public function view(string $view, array $data = []): string
+    public function view(string $view, array $data = []): string|false
     {
         // If no cache directory exists, create it
         $this->makeCacheDirectory();
@@ -57,6 +57,8 @@ class Modello
             require $compiled;
             return ob_get_clean();
         }
+
+        return false;
     }
 
     /**
