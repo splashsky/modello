@@ -9,12 +9,11 @@ class Modello
     private bool $cacheEnabled = true;
     private string $extension = '.mllo.php';
 
-    private int $renderTime = 0;
-    private int $templateCount = 0;
-    private int $blockCount = 0;
-    private bool $compiled = false;
-    private bool $recompiled = false;
-    private bool $usedCache = false;
+    private int $dbg_renderTime = 0;
+    private int $dbg_templateCount = 0;
+    private bool $dbg_compiled = false;
+    private bool $dbg_recompiled = false;
+    private bool $dbg_usedCache = false;
 
     // Stored blocks. Enables the @yield directive!
     private array $blocks = [];
