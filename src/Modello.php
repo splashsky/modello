@@ -16,7 +16,6 @@ class Modello
     private array $handlers = [
         'handleIncludes',
         'handleBlocks',
-        'handleBlockInline',
         'handleHasBlock',
         'handleBlockMissing',
         'handleYields',
@@ -209,18 +208,10 @@ class Modello
     private function handleBlocks(string $page): string
     {
         preg_match_all('/@block\( ?\'(\w*?)\' ?\)(.*?)@endblock/is', $page, $matches, PREG_SET_ORDER);
+        preg_match_all('/@block\( ?\'(\w*?)\', ?\'(\N*?)\' ?\)/is', $page, $matches, PREG_SET_ORDER);
 
         foreach ($matches as $match) {
-            if (!array_key_exists($match[1], $this->blocks)) {
-                $this->blocks[$match[1]] = '';
-            }
-
-            if (strpos($match[2], '@parent') === false) {
-                $this->blocks[$match[1]] = trim($match[2]);
-            } else {
-                $this->blocks[$match[1]] = trim(str_replace('@parent', $this->blocks[$match[1]], $match[2]));
-            }
-
+            $this->blocks[$match[1]] = trim($match[2]);
             $page = str_replace($match[0], '', $page);
         }
 
@@ -306,22 +297,6 @@ class Modello
         foreach ($matches as $match) {
             $replace = !array_key_exists($match[1], $this->blocks) ? $match[2] : '';
             $page = str_replace($match[0], $replace, $page);
-        }
-
-        return $page;
-    }
-
-    // Directive to do the same thing as @block but in one line with two strings
-    function handleBlockInline(string $page): string
-    {
-        preg_match_all('/@block\( ?\'(\w*?)\', ?\'(\N*?)\' ?\)/is', $page, $matches, PREG_SET_ORDER);
-        
-        foreach ($matches as $match) {
-            if (!array_key_exists($match[1], $this->blocks)) {
-                $this->blocks[$match[1]] = $match[2];
-            }
-
-            $page = str_replace($match[0], '', $page);
         }
 
         return $page;
