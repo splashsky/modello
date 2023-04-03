@@ -211,7 +211,7 @@ class Modello
         preg_match_all('/@block\( ?\'(\w*?)\', ?\'(\N*?)\' ?\)/is', $page, $matches, PREG_SET_ORDER);
 
         foreach ($matches as $match) {
-            $this->blocks[$match[1]] = trim($match[2]);
+            $this->blocks[$match[1]] = $match[2];
             $page = str_replace($match[0], '', $page);
         }
 
