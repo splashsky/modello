@@ -208,7 +208,8 @@ class Modello
     private function handleBlocks(string $page): string
     {
         preg_match_all('/@block\( ?\'(\w*?)\' ?\)(.*?)@endblock/is', $page, $matches, PREG_SET_ORDER);
-        preg_match_all('/@block\( ?\'(\w*?)\', ?\'(\N*?)\' ?\)/is', $page, $matches, PREG_SET_ORDER);
+        preg_match_all('/@block\( ?\'(\w*?)\', ?\'(\N*?)\' ?\)/is', $page, $inlineMatches, PREG_SET_ORDER);
+        $matches = array_merge($matches, $inlineMatches);
 
         foreach ($matches as $match) {
             $this->blocks[$match[1]] = $match[2];
