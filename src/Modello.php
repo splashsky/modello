@@ -16,8 +16,7 @@ class Modello
     private array $handlers = [
         'handleIncludes',
         'handleBlocks',
-        'handleHasBlock',
-        'handleBlockMissing',
+        'handleBlockConditionals',
         'handleYields',
         'handleEchoes',
         'handleEscapedEchoes',
@@ -278,24 +277,17 @@ class Modello
 	}
 
     // A directive to test whether we have a block by a given key
-    function handleHasBlock(string $page): string
+    function handleBlockConditionals(string $page): string
     {
-        preg_match_all('/@hasblock\( ?\'(\w*?)\' ?\)(.*?)@endif/is', $page, $matches, PREG_SET_ORDER);
+        preg_match_all('/@hasblock\( ?\'(\w*?)\' ?\)(.*?)@endif/is', $page, $has, PREG_SET_ORDER);
+        preg_match_all('/@blockmissing\( ?\'(\w*?)\' ?\)(.*?)@endif/is', $page, $missing, PREG_SET_ORDER);
         
-        foreach ($matches as $match) {
+        foreach ($has as $match) {
             $replace = array_key_exists($match[1], $this->blocks) ? $match[2] : '';
             $page = str_replace($match[0], $replace, $page);
         }
-
-        return $page;
-    }
-
-    // Directive that does the opposite of @hasblock
-    function handleBlockMissing(string $page): string
-    {
-        preg_match_all('/@blockmissing\( ?\'(\w*?)\' ?\)(.*?)@endif/is', $page, $matches, PREG_SET_ORDER);
         
-        foreach ($matches as $match) {
+        foreach ($missing as $match) {
             $replace = !array_key_exists($match[1], $this->blocks) ? $match[2] : '';
             $page = str_replace($match[0], $replace, $page);
         }
