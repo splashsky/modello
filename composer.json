@@ -16,5 +16,11 @@
     "autoload": {
         "psr-4": {"Splashsky\\": "src/"}
     },
-    "require": {}
+    "require": {},
+    "require-dev": {
+        "friendsofphp/php-cs-fixer": "^v3.16.0"
+    },
+    "scripts": {
+        "fix": "php-cs-fixer fix"
+    }
 }

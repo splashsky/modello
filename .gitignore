@@ -1,2 +1,5 @@
 /vendor/
 /test/
+
+# Jetbrains IDEs
+.idea
