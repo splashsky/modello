@@ -54,7 +54,10 @@ class Modello
             extract($data, EXTR_SKIP);
             require $compiled;
 
-            return ob_get_clean();
+            $output = ob_get_clean();
+            ob_end_clean(); // Discard the output buffer content and stop output buffering
+
+            return $output;
         }
 
         return false;
