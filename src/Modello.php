@@ -39,8 +39,9 @@ class Modello
 
     /**
      * Compile and render the given view file! $view accepts dot notation, and looks in the $views path. Returns false on failure.
+     * Cache as specified filename if define so can use same template for different page
      */
-    public function view(string $view, array $data = []): string|false
+    public function view(string $view, array $data = [], string $cview = ''): string|false
     {
         // If no cache directory exists, create it
         $this->makeCacheDirectory();
@@ -48,7 +49,7 @@ class Modello
         // Get the path to the view template, then if we can read it compile it and render it
         $viewPath = $this->makeViewPath($view);
         if ($template = $this->read($viewPath)) {
-            $compiled = $this->compile($view, $template);
+            $compiled = $this->compile($view, $template, $cview);
 
             // Render the view in an output buffer sandbox and return the results.
             ob_start();
@@ -93,11 +94,11 @@ class Modello
     }
 
     // Compile the given view. $view takes the path to the template file, $template takes the content.
-    private function compile(string $view, string $template): string
+    private function compile(string $view, string $template, string $cview = ''): string
     {
         // Get the paths to both the view template and the cached file
         $viewPath = $this->makeViewPath($view);
-        $cached = $this->makeCachePath($view);
+        $cached = $this->makeCachePath($view, $cview);
 
         // If there's a cached view and we don't need to recompile it, we'll just return the
         // path to the cached view
@@ -132,11 +133,16 @@ class Modello
         return $this->views . str_replace('.', '/', $view) . $this->extension;
     }
 
-    // Turn a given $view path into a real path for the compiled/cached view file.
-    private function makeCachePath(string $view): string
+    // Turn a given $view path into a real path for the compiled/cached view file. Additional specific cache name
+    private function makeCachePath(string $view, string $cview = ''): string
     {
-        // 'foo.bar' => 'cache/views/foo-bar.php'
-        return $this->cache . str_replace('.', '-', $view) . '.php';
+        if(!empty($cview)){
+            // 'foo.bar' => 'cache/views/foo-bar.php'
+            return $this->cache . str_replace('.', '-', $view) . '_' . str_replace(' ', '-', strtolower($cview)) . '.php';
+        } else {
+            // 'foo.bar' => 'cache/views/foo-bar.php'
+            return $this->cache . str_replace('.', '-', $view) . '.php';
+        }
     }
 
     // Create the $this->cache directory with 0744 perms, if it doesn't exist.
